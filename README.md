@@ -4,7 +4,7 @@ A smart account implementation with a two-step intent/action pattern.
 
 Accounts expose a generic interface for orchestration packages. [Multisig](https://github.com/govex-dao/multisig-v3) and [Decision Markets](https://github.com/govex-dao/decision-markets-v3) are two such implementations.
 
-Internal account actions run as the kernel. To call third-party packages, generate and deploy new typed action packages.
+Internal account actions run as a self contained kernel. To call third-party packages, generate and deploy new typed action packages.
 
 ## Actions
 
