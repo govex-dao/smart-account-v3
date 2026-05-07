@@ -4,9 +4,7 @@ A smart account implementation with a two-step intent/action pattern.
 
 Accounts expose a generic interface for orchestration packages. [Multisig](https://github.com/govex-dao/multisig-v3) and [Decision Markets](https://github.com/govex-dao/decision-markets-v3) are two such implementations.
 
-Internal account actions run as a self contained kernel. To call third-party packages, generate and deploy new typed action packages.
-
-Accounts can run in one of three authorization modes: `GLOBAL_ONLY`, where they may only use built-in account actions and the append-only admin-controlled global registry of actions; `WHITELIST`, where they may also use actions from their own per-account registry; and `PERMISSIVE`, where they may stage and execute any action.
+Accounts can run in one of three authorization modes: `GLOBAL_ONLY`, where they may only use the in-built smart account actions as well as the append-only admin-controlled global registry of actions; `WHITELIST`, where they may also use actions from their own per-account registry; and `PERMISSIVE`, where they may stage and execute any action. To call third-party packages, generate and deploy new typed action packages.
 
 ## Actions
 
