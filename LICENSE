@@ -1,0 +1,18 @@
+Mixed License Notice
+====================
+
+This repository contains portions of code from Account Tech's move-framework at commit
+1e04e2a23c98f3714b72fc78166df460ee5e4ec9:
+
+https://github.com/account-tech/move-framework/commit/1e04e2a23c98f3714b72fc78166df460ee5e4ec9
+
+Code originating from Account Tech's move-framework remains licensed under the
+license that applied to that upstream code at the referenced commit: the Apache
+License, Version 2.0. See `LICENSE-APACHE-2.0`.
+
+Govex-authored modifications, additions, and new code in this repository are
+licensed under the Business Source License (BSL) 1.1 - Non-Commercial Use Only.
+See `LICENSE-BUSL-1.1`.
+
+Where a source file contains an SPDX identifier or other file-level license
+notice, that file-level notice governs that file.
