@@ -1,0 +1,22 @@
+# Upgradable and extensible smart account protocol
+# Heavily adapted fork of the Move Framework by Account.tech
+# Core account primitives: intents, executables, action validation, package registry
+
+[package]
+published-at = "0x0f6ef484a0867ccffe219fa1f4648e58f8c3fd04a4ddcfb318a27f9cc6d2f3d9"
+name = "AccountProtocol"
+edition = "2024"
+license = "AGPL-3.0"
+authors = [ "Thouny (thouny@tuta.io)", "Greshamscode" ]
+
+[dependencies]
+
+[dev-dependencies]
+
+[addresses]
+account_protocol = "0x0f6ef484a0867ccffe219fa1f4648e58f8c3fd04a4ddcfb318a27f9cc6d2f3d9"
+
+[environments]
+mainnet = "35834a8a"
+testnet = "4c78adac"
+localnet = "4afd09da"

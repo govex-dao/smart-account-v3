@@ -1,0 +1,48 @@
+// Copyright (c) Govex DAO LLC
+// SPDX-License-Identifier: BUSL-1.1
+
+// Portions of this file are derived from the account.tech Move Framework project.
+// Those portions remain licensed under the Apache License, Version 2.0.
+
+/// This module tracks the version of the package by implementing the version_witness type.
+/// A new version type should be defined for each new version of the package.
+
+module account_protocol::version;
+
+use account_protocol::version_witness::{Self, VersionWitness};
+
+// === Imports ===
+
+// === Constants ===
+
+const VERSION: u64 = 1; // bump this when the package is upgraded
+
+// === Structs ===
+
+// define a new version struct for each new version of the package
+public struct V1 has drop {}
+
+public(package) fun current(): VersionWitness {
+    version_witness::new(V1 {}) // modify with the new version struct
+}
+
+// === Public functions ===
+
+public fun get(): u64 {
+    VERSION
+}
+
+// === Test functions ===
+
+#[test_only]
+public struct Witness() has drop;
+
+#[test_only]
+public fun witness(): Witness {
+    Witness()
+}
+
+#[test]
+public fun test_get() {
+    assert!(get() == 1, 1);
+}

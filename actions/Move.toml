@@ -1,0 +1,21 @@
+# Primitive actions for the smart account
+# Includes: access control, transfers, vaults, vesting, streams, currency, memos
+# Heavily adapted fork of the Move Framework by Account.tech
+
+[package]
+published-at = "0xaa682664f419d51af5071ed0449dffbcf3a417fd12961d916b1a433542e9478d"
+name = "AccountActions"
+edition = "2024"
+license = "AGPL-3.0"
+authors = [ "Thouny (thouny@tuta.io)", "Greshamscode" ]
+
+[dependencies]
+AccountProtocol = { local = "../protocol" }
+
+[addresses]
+account_actions = "0xaa682664f419d51af5071ed0449dffbcf3a417fd12961d916b1a433542e9478d"
+
+[environments]
+mainnet = "35834a8a"
+testnet = "4c78adac"
+localnet = "4afd09da"
