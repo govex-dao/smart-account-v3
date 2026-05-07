@@ -6,6 +6,8 @@ Accounts expose a generic interface for orchestration packages. [Multisig](https
 
 Internal account actions run as a self contained kernel. To call third-party packages, generate and deploy new typed action packages.
 
+Accounts can run in one of three authorization modes: `GLOBAL_ONLY`, where they may only use built-in account actions and the append-only admin-controlled global registry of actions; `WHITELIST`, where they may also use actions from their own per-account registry; and `PERMISSIVE`, where they may stage and execute any action.
+
 ## Actions
 
 - Transfer: `transfer_object`, `transfer_to_sender`, `transfer_coin`, `transfer_coin_to_sender`, `withdraw_object`, `provide_object`
