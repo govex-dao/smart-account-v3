@@ -1,0 +1,18 @@
+{
+  "name": "@govex/smart-account-action-codegen",
+  "version": "0.1.0",
+  "description": "Generate Govex smart-account action wrappers from callable Move functions.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "tsx src/generate.ts",
+    "generate:action": "tsx src/generate.ts --action",
+    "scan": "tsx src/scan.ts",
+    "test": "tsx src/move-gen.snapshot.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
+}

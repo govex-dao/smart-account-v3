@@ -1,0 +1,38 @@
+{
+  "id": "create_stream",
+  "name": "Create Stream",
+  "category": "stream",
+  "package": "accountActions",
+  "module": "vault",
+  "initModule": "stream_init_actions",
+  "actionStructName": "CreateStreamAction",
+  "specFunctionName": "add_create_stream_spec",
+  "executionFunctionName": "do_init_create_stream",
+  "deleteFunctionName": "delete_create_stream",
+  "marker": {
+    "name": "CreateStream",
+    "factoryName": "create_stream_marker",
+    "phantomTypes": ["CoinType"]
+  },
+  "fields": [
+    { "name": "vault_name", "type": "String", "description": "Source vault name" },
+    { "name": "beneficiary", "type": "address", "description": "Stream beneficiary or spending-limit delegate" },
+    { "name": "amount_per_iteration", "type": "u64", "description": "Amount per iteration" },
+    { "name": "start_time", "type": "Option<u64>", "description": "Start timestamp in ms; none uses execution clock" },
+    { "name": "iterations_total", "type": "u64", "description": "Total number of iterations" },
+    { "name": "iteration_period_ms", "type": "u64", "description": "Period between iterations (ms)" },
+    { "name": "claim_window_ms", "type": "Option<u64>", "description": "Claim window duration (ms)" },
+    { "name": "expiry_ms", "type": "Option<u64>", "description": "Spending limit expiry; must be none for regular streams" },
+    { "name": "whitelisted_recipients", "type": "vector<address>", "description": "Empty creates a regular stream; non-empty creates a spending limit" }
+  ],
+  "execution": {
+    "needsAccount": true,
+    "needsRegistry": true,
+    "needsClock": true,
+    "needsCtx": true
+  },
+  "version": 1,
+  "launchpadSupported": true,
+  "proposalSupported": true,
+  "description": "Create a vesting stream (DAO-controlled: cancellable, non-transferable)"
+}

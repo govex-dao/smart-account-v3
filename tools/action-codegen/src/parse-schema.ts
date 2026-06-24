@@ -1,0 +1,637 @@
+/**
+ * Action Schema Parser & Validator
+ *
+ * Defines the JSON schema types for action codegen and provides
+ * validation + type mapping utilities.
+ */
+
+// =============================================================================
+// SCHEMA TYPES
+// =============================================================================
+
+export type FieldType =
+  | 'u8'
+  | 'u64'
+  | 'u128'
+  | 'bool'
+  | 'String'
+  | 'address'
+  | 'ID'
+  | 'Option<u64>'
+  | 'Option<u128>'
+  | 'Option<bool>'
+  | 'Option<String>'
+  | 'vector<u8>'
+  | 'vector<String>'
+  | 'vector<address>';
+
+export type FieldRole =
+  // Shared object passed from PTB, ID validated against staged spec
+  | 'external_object'
+  // Coin from executable_resources (take_coin / provide_coin)
+  | 'resource_in_coin'
+  | 'resource_out_coin'
+  // Object from executable_resources (take_object / provide_object)
+  | 'resource_in_object'
+  | 'resource_out_object'
+  // Aliases — resource_in/resource_out default to coin variant (most common)
+  | 'resource_in'
+  | 'resource_out';
+
+export interface FieldDef {
+  name: string;
+  type: FieldType;
+  role?: FieldRole;
+  /** Full Move value type for executable_resources fields, e.g. Coin<CoinType> or pkg::module::Obj<T>. */
+  moveType?: string;
+  /** Local variable name for resources taken from executable_resources. */
+  resourceVarName?: string;
+  description?: string;
+}
+
+export type PackageId =
+  | 'accountActions'
+  | 'futarchyActions'
+  | 'futarchyFactory'
+  | 'futarchyGovernanceActions'
+  | 'futarchyOracleActions';
+
+export type ActionCategory =
+  | 'transfer'
+  | 'vault'
+  | 'currency'
+  | 'stream'
+  | 'memo'
+  | 'config'
+  | 'quota'
+  | 'liquidity'
+  | 'dissolution'
+  | 'launchpad'
+  | 'package_registry'
+  | 'package_upgrade'
+  | 'access_control'
+  | 'vesting'
+  | 'oracle';
+
+export interface MarkerDef {
+  /** Marker struct name, e.g. "CetusSwap" */
+  name: string;
+  /** Phantom type params on the marker, e.g. ["CoinIn", "CoinOut"] */
+  phantomTypes?: string[];
+  /** Override marker factory function name. Defaults to snake_case(marker.name). */
+  factoryName?: string;
+}
+
+export interface ExternalObjectDef {
+  /** Param name in the function signature */
+  name: string;
+  /** Full Move type, e.g. "cetus::pool::Pool<CoinIn, CoinOut>" */
+  type: string;
+  /** Field name in ActionSpec that stores the ID */
+  idField: string;
+  /** Whether the object is passed as mutable reference */
+  mutable?: boolean;
+}
+
+export type CapPassStyle = 'value' | 'ref' | 'mut_ref';
+
+export interface CapBorrowDef {
+  /** Full Move type, e.g. "PackageAdminCap" or "some_module::AdminCap" */
+  capType: string;
+  /** Local variable name in generated code */
+  varName: string;
+  /** How the cap is passed to the wrapped call: value (take+return), ref (&), mut_ref (&mut) */
+  passStyle: CapPassStyle;
+}
+
+export interface ExecutionDef {
+  /** Whether the function takes &mut Account */
+  needsAccount?: boolean;
+  /** Whether the wrapped function needs PackageRegistry. Generated action handlers always take registry. */
+  needsRegistry?: boolean;
+  /** Whether the function takes &Clock */
+  needsClock?: boolean;
+  /** Whether the function takes &mut TxContext */
+  needsCtx?: boolean;
+  /** External objects passed from PTB and validated against staged IDs */
+  externalObjects?: ExternalObjectDef[];
+  /** Borrow a capability from the Account via access_control (remove/use/return pattern) */
+  capBorrow?: CapBorrowDef;
+  /** Ability constraints for execution type params, e.g. { "T": ["key", "store"] } */
+  typeParamConstraints?: Record<string, string[]>;
+}
+
+export interface ActionSchema {
+  /** Unique action ID, e.g. "cetus_swap" */
+  id: string;
+  /** Human-readable name, e.g. "Cetus Swap" */
+  name: string;
+  /** Action category */
+  category: ActionCategory;
+  /** Package that owns this action */
+  package: PackageId;
+  /** Move module name for execution, e.g. "cetus_swap" */
+  module: string;
+  /** Marker type definition */
+  marker: MarkerDef;
+  /** Fields stored in the ActionSpec (BCS serialized) */
+  fields: FieldDef[];
+  /** Execution function configuration */
+  execution: ExecutionDef;
+  /** Schema version */
+  version: number;
+  /** Whether this action is supported in launchpad flows */
+  launchpadSupported: boolean;
+  /** Whether this action is supported in proposal flows */
+  proposalSupported: boolean;
+
+  // === Optional overrides ===
+
+  /** Override init_actions module name (default: `${module}_init_actions`) */
+  initModule?: string;
+  /** Override the action struct name (default: PascalCase of marker.name + "Action") */
+  actionStructName?: string;
+  /** Override the add_*_spec function name */
+  specFunctionName?: string;
+  /** Override the do_init_* / do_* function name */
+  executionFunctionName?: string;
+  /** Override the delete_* function name */
+  deleteFunctionName?: string;
+  /** Description for documentation */
+  description?: string;
+
+  /** Auto-generated by scanner: the 3rd party function call to wrap */
+  wrappedCall?: WrappedCallDef;
+}
+
+export interface WrappedCallDef {
+  /** Full call target, e.g. "cetus::router::swap" */
+  target: string;
+  /** Type params to forward, e.g. ["CoinIn", "CoinOut"] */
+  typeParams: string[];
+  /** Ordered args as they appear in the original function signature */
+  args: WrappedCallArg[];
+  /** Return type if any, e.g. "Coin<CoinOut>" */
+  returnType?: string;
+}
+
+export interface WrappedCallArg {
+  /** How this arg is sourced */
+  source:
+    | 'bcs_field'
+    | 'resource_in_coin'
+    | 'resource_in_object'
+    | 'external_object'
+    | 'account'
+    | 'registry'
+    | 'clock'
+    | 'ctx'
+    | 'cap_borrow';
+  /** Variable name in the generated code */
+  varName: string;
+  /** For external_object: whether it's &mut */
+  mutable?: boolean;
+}
+
+// =============================================================================
+// TYPE MAPPINGS
+// =============================================================================
+
+export interface MoveTypeMapping {
+  /** The Move struct type, e.g. "u64" */
+  moveType: string;
+  /** BCS deserialization expression, using "reader" as the BCS variable name */
+  bcsPeel: string;
+  /** action_events method name, e.g. "add_u64" */
+  eventMethod: string;
+  /** Whether the event helper takes the value by reference (&) */
+  eventPassByRef?: boolean;
+  /** Event value expression (if different from just the field name) */
+  eventValue?: (fieldName: string) => string;
+}
+
+export const MOVE_TYPE_MAP: Record<FieldType, MoveTypeMapping> = {
+  'u8': {
+    moveType: 'u8',
+    bcsPeel: 'bcs::peel_u8(&mut reader)',
+    eventMethod: 'add_u8',
+  },
+  'u64': {
+    moveType: 'u64',
+    bcsPeel: 'bcs::peel_u64(&mut reader)',
+    eventMethod: 'add_u64',
+  },
+  'u128': {
+    moveType: 'u128',
+    bcsPeel: 'bcs::peel_u128(&mut reader)',
+    eventMethod: 'add_u128',
+  },
+  'bool': {
+    moveType: 'bool',
+    bcsPeel: 'bcs::peel_bool(&mut reader)',
+    eventMethod: 'add_bool',
+  },
+  'String': {
+    moveType: 'String',
+    bcsPeel: 'std::string::utf8(bcs::peel_vec_u8(&mut reader))',
+    eventMethod: 'add_string',
+  },
+  'address': {
+    moveType: 'address',
+    bcsPeel: 'bcs::peel_address(&mut reader)',
+    eventMethod: 'add_address',
+  },
+  'ID': {
+    moveType: 'ID',
+    bcsPeel: 'object::id_from_address(bcs::peel_address(&mut reader))',
+    eventMethod: 'add_id',
+  },
+  'Option<u64>': {
+    moveType: 'Option<u64>',
+    bcsPeel: 'OPTION_U64_PEEL', // handled specially in generator
+    eventMethod: 'add_option_u64',
+  },
+  'Option<u128>': {
+    moveType: 'Option<u128>',
+    bcsPeel: 'OPTION_U128_PEEL',
+    eventMethod: 'add_option_u128',
+  },
+  'Option<bool>': {
+    moveType: 'Option<bool>',
+    bcsPeel: 'OPTION_BOOL_PEEL',
+    eventMethod: 'add_option_bool',
+  },
+  'Option<String>': {
+    moveType: 'Option<String>',
+    bcsPeel: 'OPTION_STRING_PEEL',
+    eventMethod: 'add_option_string',
+    eventPassByRef: true,
+  },
+  'vector<u8>': {
+    moveType: 'vector<u8>',
+    bcsPeel: 'bcs::peel_vec_u8(&mut reader)',
+    eventMethod: 'add_vector_u8',
+    eventPassByRef: true,
+  },
+  'vector<String>': {
+    moveType: 'vector<String>',
+    bcsPeel: 'VECTOR_STRING_PEEL', // handled specially
+    eventMethod: 'add_vector_string',
+    eventPassByRef: true,
+  },
+  'vector<address>': {
+    moveType: 'vector<address>',
+    bcsPeel: 'bcs::peel_vec_address(&mut reader)',
+    eventMethod: 'add_vector_address',
+    eventPassByRef: true,
+  },
+};
+
+export interface TsTypeMapping {
+  /** TS tx.pure.* call, e.g. "tx.pure.u64(v)" */
+  txPure: (varName: string) => string;
+  /** TS interface type */
+  tsType: string;
+}
+
+export const TS_TYPE_MAP: Record<FieldType, TsTypeMapping> = {
+  'u8': {
+    txPure: (v) => `tx.pure.u8(${v})`,
+    tsType: 'number',
+  },
+  'u64': {
+    txPure: (v) => `tx.pure.u64(${v})`,
+    tsType: 'bigint | number',
+  },
+  'u128': {
+    txPure: (v) => `tx.pure.u128(${v})`,
+    tsType: 'bigint | number',
+  },
+  'bool': {
+    txPure: (v) => `tx.pure.bool(${v})`,
+    tsType: 'boolean',
+  },
+  'String': {
+    txPure: (v) => `tx.pure.string(${v})`,
+    tsType: 'string',
+  },
+  'address': {
+    txPure: (v) => `tx.pure.address(${v})`,
+    tsType: 'string',
+  },
+  'ID': {
+    txPure: (v) => `tx.pure.id(${v})`,
+    tsType: 'string',
+  },
+  'Option<u64>': {
+    txPure: (v) => `tx.pure.option('u64', ${v})`,
+    tsType: 'bigint | number | null',
+  },
+  'Option<u128>': {
+    txPure: (v) => `tx.pure.option('u128', ${v})`,
+    tsType: 'bigint | number | null',
+  },
+  'Option<bool>': {
+    txPure: (v) => `tx.pure.option('bool', ${v})`,
+    tsType: 'boolean | null',
+  },
+  'Option<String>': {
+    txPure: (v) => `tx.pure.option('string', ${v})`,
+    tsType: 'string | null',
+  },
+  'vector<u8>': {
+    txPure: (v) => `tx.pure.vector('u8', ${v})`,
+    tsType: 'number[]',
+  },
+  'vector<String>': {
+    txPure: (v) => `tx.pure.vector('string', ${v})`,
+    tsType: 'string[]',
+  },
+  'vector<address>': {
+    txPure: (v) => `tx.pure.vector('address', ${v})`,
+    tsType: 'string[]',
+  },
+};
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+/** Convert package ID to Move address-style package name */
+export function packageToMoveAddr(pkg: PackageId): string {
+  switch (pkg) {
+    case 'accountActions':
+      return 'account_actions';
+    case 'futarchyActions':
+      return 'futarchy_actions';
+    case 'futarchyFactory':
+      return 'futarchy_factory';
+    case 'futarchyGovernanceActions':
+      return 'futarchy_governance_actions';
+    case 'futarchyOracleActions':
+      return 'futarchy_oracle_actions';
+  }
+}
+
+/** snake_case to PascalCase */
+export function snakeToPascal(s: string): string {
+  return s
+    .split('_')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join('');
+}
+
+/** snake_case to camelCase */
+export function snakeToCamel(s: string): string {
+  const pascal = snakeToPascal(s);
+  return pascal.charAt(0).toLowerCase() + pascal.slice(1);
+}
+
+/** PascalCase/camelCase to snake_case */
+export function snakeCase(s: string): string {
+  return s
+    .replace(/([A-Z])/g, '_$1')
+    .toLowerCase()
+    .replace(/^_/, '');
+}
+
+/** Get the init_actions module name */
+export function getInitModule(schema: ActionSchema): string {
+  return schema.initModule ?? `${schema.module}_init_actions`;
+}
+
+/** Get the action struct name (Layer 1) */
+export function getActionStructName(schema: ActionSchema): string {
+  return schema.actionStructName ?? `${schema.marker.name}Action`;
+}
+
+/** Get the add_*_spec function name (Layer 2) */
+export function getSpecFunctionName(schema: ActionSchema): string {
+  if (schema.specFunctionName) return schema.specFunctionName;
+  // Derive from module name: "vault_spend" -> "add_spend_spec"
+  // For simple modules: "memo" -> "add_emit_memo_spec" (use marker name)
+  // Best default: use the id
+  return `add_${schema.id}_spec`;
+}
+
+/** Get the execution function name (Layer 3) */
+export function getExecFunctionName(schema: ActionSchema): string {
+  return schema.executionFunctionName ?? `do_init_${schema.id}`;
+}
+
+/** Get the delete function name */
+export function getDeleteFunctionName(schema: ActionSchema): string {
+  return schema.deleteFunctionName ?? `delete_${schema.id}`;
+}
+
+/** Normalize role aliases: resource_in → resource_in_coin, resource_out → resource_out_coin */
+export function normalizeRole(role?: FieldRole): FieldRole | undefined {
+  if (role === 'resource_in') return 'resource_in_coin';
+  if (role === 'resource_out') return 'resource_out_coin';
+  return role;
+}
+
+/** Check if a role is any resource_in variant */
+export function isResourceIn(role?: FieldRole): boolean {
+  const r = normalizeRole(role);
+  return r === 'resource_in_coin' || r === 'resource_in_object';
+}
+
+/** Check if a role is any resource_out variant */
+export function isResourceOut(role?: FieldRole): boolean {
+  const r = normalizeRole(role);
+  return r === 'resource_out_coin' || r === 'resource_out_object';
+}
+
+/** Get the full marker type path, e.g. "account_actions::memo::Memo" */
+export function getFullMarkerType(schema: ActionSchema): string {
+  const pkgAddr = packageToMoveAddr(schema.package);
+  const phantoms = schema.marker.phantomTypes;
+  const basePath = `${pkgAddr}::${schema.module}::${schema.marker.name}`;
+  if (phantoms && phantoms.length > 0) {
+    return `${basePath}<${phantoms.join(', ')}>`;
+  }
+  return basePath;
+}
+
+/** Get marker type without phantoms (for type_name references) */
+export function getMarkerTypeBase(schema: ActionSchema): string {
+  const pkgAddr = packageToMoveAddr(schema.package);
+  return `${pkgAddr}::${schema.module}::${schema.marker.name}`;
+}
+
+/** Get all phantom type params from marker */
+export function getPhantomTypes(schema: ActionSchema): string[] {
+  return schema.marker.phantomTypes ?? [];
+}
+
+/** Get type params string for function signatures, e.g. "<CoinIn, CoinOut>" */
+export function getTypeParamsStr(schema: ActionSchema): string {
+  const phantoms = getPhantomTypes(schema);
+  if (phantoms.length === 0) return '';
+  return `<${phantoms.join(', ')}>`;
+}
+
+/** Get marker factory function name */
+export function getMarkerFactoryName(schema: ActionSchema): string {
+  return schema.marker.factoryName ?? snakeCase(schema.marker.name);
+}
+
+// =============================================================================
+// VALIDATION
+// =============================================================================
+
+const VALID_FIELD_TYPES: Set<string> = new Set(Object.keys(MOVE_TYPE_MAP));
+const VALID_ROLES: Set<string> = new Set([
+  'external_object',
+  'resource_in', 'resource_out',
+  'resource_in_coin', 'resource_out_coin',
+  'resource_in_object', 'resource_out_object',
+]);
+const VALID_PACKAGES: Set<string> = new Set([
+  'accountActions',
+  'futarchyActions',
+  'futarchyFactory',
+  'futarchyGovernanceActions',
+  'futarchyOracleActions',
+]);
+const VALID_CATEGORIES: Set<string> = new Set([
+  'transfer',
+  'vault',
+  'currency',
+  'stream',
+  'memo',
+  'config',
+  'quota',
+  'liquidity',
+  'dissolution',
+  'launchpad',
+  'package_registry',
+  'package_upgrade',
+  'access_control',
+  'vesting',
+  'oracle',
+]);
+
+export function validateSchema(schema: unknown): ActionSchema {
+  if (!schema || typeof schema !== 'object') {
+    throw new Error('Schema must be a non-null object');
+  }
+
+  const s = schema as Record<string, unknown>;
+
+  // Required string fields
+  for (const field of ['id', 'name', 'category', 'package', 'module']) {
+    if (typeof s[field] !== 'string' || (s[field] as string).length === 0) {
+      throw new Error(`Missing or invalid required field: ${field}`);
+    }
+  }
+
+  if (!VALID_PACKAGES.has(s.package as string)) {
+    throw new Error(`Invalid package: ${s.package}`);
+  }
+  if (!VALID_CATEGORIES.has(s.category as string)) {
+    throw new Error(`Invalid category: ${s.category}`);
+  }
+
+  // Marker
+  if (!s.marker || typeof s.marker !== 'object') {
+    throw new Error('Missing or invalid marker');
+  }
+  const marker = s.marker as Record<string, unknown>;
+  if (typeof marker.name !== 'string' || marker.name.length === 0) {
+    throw new Error('marker.name is required');
+  }
+  if (marker.phantomTypes !== undefined) {
+    if (!Array.isArray(marker.phantomTypes)) {
+      throw new Error('marker.phantomTypes must be an array');
+    }
+    for (const pt of marker.phantomTypes) {
+      if (typeof pt !== 'string') {
+        throw new Error('marker.phantomTypes entries must be strings');
+      }
+    }
+  }
+  if (marker.factoryName !== undefined && typeof marker.factoryName !== 'string') {
+    throw new Error('marker.factoryName must be a string');
+  }
+
+  // Fields
+  if (!Array.isArray(s.fields)) {
+    throw new Error('fields must be an array');
+  }
+  for (const field of s.fields as unknown[]) {
+    if (!field || typeof field !== 'object') {
+      throw new Error('Each field must be an object');
+    }
+    const f = field as Record<string, unknown>;
+    if (typeof f.name !== 'string') throw new Error('field.name must be a string');
+    if (f.resourceVarName !== undefined && typeof f.resourceVarName !== 'string') {
+      throw new Error('field.resourceVarName must be a string');
+    }
+    if (f.moveType !== undefined && typeof f.moveType !== 'string') {
+      throw new Error('field.moveType must be a string');
+    }
+    if (typeof f.type !== 'string' || !VALID_FIELD_TYPES.has(f.type)) {
+      throw new Error(`Invalid field type: ${f.type}`);
+    }
+    if (f.role !== undefined && !VALID_ROLES.has(f.role as string)) {
+      throw new Error(`Invalid field role: ${f.role}`);
+    }
+  }
+
+  // Execution
+  if (!s.execution || typeof s.execution !== 'object') {
+    throw new Error('execution must be an object');
+  }
+
+  // Validate capBorrow
+  const execObj = s.execution as Record<string, unknown>;
+  if (execObj.typeParamConstraints !== undefined) {
+    if (!execObj.typeParamConstraints || typeof execObj.typeParamConstraints !== 'object' || Array.isArray(execObj.typeParamConstraints)) {
+      throw new Error('execution.typeParamConstraints must be an object');
+    }
+    for (const [name, constraints] of Object.entries(execObj.typeParamConstraints as Record<string, unknown>)) {
+      if (!name || !Array.isArray(constraints) || constraints.some((c) => typeof c !== 'string')) {
+        throw new Error('execution.typeParamConstraints values must be string arrays');
+      }
+    }
+  }
+  if (execObj.capBorrow !== undefined) {
+    if (!execObj.capBorrow || typeof execObj.capBorrow !== 'object') {
+      throw new Error('execution.capBorrow must be an object');
+    }
+    const cb = execObj.capBorrow as Record<string, unknown>;
+    if (typeof cb.capType !== 'string' || cb.capType.length === 0) {
+      throw new Error('capBorrow.capType is required');
+    }
+    if (typeof cb.varName !== 'string' || cb.varName.length === 0) {
+      throw new Error('capBorrow.varName is required');
+    }
+    const validPassStyles = ['value', 'ref', 'mut_ref'];
+    if (typeof cb.passStyle !== 'string' || !validPassStyles.includes(cb.passStyle)) {
+      throw new Error(`capBorrow.passStyle must be one of: ${validPassStyles.join(', ')}`);
+    }
+    if (!execObj.needsAccount) {
+      throw new Error('capBorrow requires needsAccount: true');
+    }
+    if (!execObj.needsRegistry) {
+      throw new Error('capBorrow requires needsRegistry: true');
+    }
+  }
+
+  // Version
+  if (typeof s.version !== 'number' || s.version < 1) {
+    throw new Error('version must be a positive number');
+  }
+
+  // Booleans
+  if (typeof s.launchpadSupported !== 'boolean') {
+    throw new Error('launchpadSupported must be a boolean');
+  }
+  if (typeof s.proposalSupported !== 'boolean') {
+    throw new Error('proposalSupported must be a boolean');
+  }
+
+  return s as unknown as ActionSchema;
+}

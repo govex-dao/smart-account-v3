@@ -1,0 +1,33 @@
+{
+  "id": "transfer",
+  "name": "Transfer Object",
+  "category": "transfer",
+  "package": "accountActions",
+  "module": "transfer",
+  "initModule": "transfer_init_actions",
+  "actionStructName": "TransferObjectAction",
+  "specFunctionName": "add_transfer_object_spec",
+  "executionFunctionName": "do_init_transfer",
+  "deleteFunctionName": "delete_transfer",
+  "marker": {
+    "name": "TransferObject",
+    "phantomTypes": ["T"]
+  },
+  "fields": [
+    { "name": "recipient", "type": "address", "description": "Recipient address" },
+    { "name": "resource_name", "type": "String", "role": "resource_in_object", "description": "Resource name to take object from executable_resources" }
+  ],
+  "execution": {
+    "needsAccount": false,
+    "needsRegistry": true,
+    "needsClock": false,
+    "needsCtx": false,
+    "typeParamConstraints": {
+      "T": ["key", "store"]
+    }
+  },
+  "version": 1,
+  "launchpadSupported": true,
+  "proposalSupported": true,
+  "description": "Transfer an object to a recipient (taken from executable_resources)"
+}

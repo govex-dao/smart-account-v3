@@ -1,0 +1,28 @@
+{
+  "id": "emit_memo",
+  "name": "Emit Memo",
+  "category": "memo",
+  "package": "accountActions",
+  "module": "memo",
+  "initModule": "memo_init_actions",
+  "actionStructName": "EmitMemoAction",
+  "specFunctionName": "add_emit_memo_spec",
+  "executionFunctionName": "do_emit_memo",
+  "deleteFunctionName": "delete_memo",
+  "marker": {
+    "name": "Memo"
+  },
+  "fields": [
+    { "name": "memo", "type": "String", "description": "The memo content" }
+  ],
+  "execution": {
+    "needsAccount": true,
+    "needsRegistry": true,
+    "needsClock": true,
+    "needsCtx": true
+  },
+  "version": 1,
+  "launchpadSupported": true,
+  "proposalSupported": true,
+  "description": "Emit a text memo event"
+}

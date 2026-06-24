@@ -1,0 +1,32 @@
+{
+  "id": "deposit",
+  "name": "Vault Deposit",
+  "category": "vault",
+  "package": "accountActions",
+  "module": "vault",
+  "initModule": "vault_init_actions",
+  "actionStructName": "DepositAction",
+  "specFunctionName": "add_deposit_spec",
+  "executionFunctionName": "do_init_deposit",
+  "deleteFunctionName": "delete_deposit",
+  "marker": {
+    "name": "VaultDeposit",
+    "factoryName": "vault_deposit_marker",
+    "phantomTypes": ["CoinType"]
+  },
+  "fields": [
+    { "name": "vault_name", "type": "String", "description": "Name of the vault" },
+    { "name": "amount", "type": "u64", "description": "Amount to deposit" },
+    { "name": "resource_name", "type": "String", "role": "resource_in", "description": "Resource name to take coin from executable_resources" }
+  ],
+  "execution": {
+    "needsAccount": true,
+    "needsRegistry": true,
+    "needsClock": false,
+    "needsCtx": false
+  },
+  "version": 1,
+  "launchpadSupported": true,
+  "proposalSupported": true,
+  "description": "Deposit coins into a vault (taken from executable_resources)"
+}
