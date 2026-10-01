@@ -16,7 +16,4 @@ Accounts can run in one of three authorization modes: `GLOBAL_ONLY`, where they 
 - Package upgrades: `lock_upgrade_cap`, `unlock_upgrade_cap`, `upgrade_package`, `commit_upgrade`, `restrict_upgrade`
 - Memo: `memo`
 
-| Package name | Mainnet package ID |
-|---|---|
-| `AccountProtocol` | `0x0f6ef484a0867ccffe219fa1f4648e58f8c3fd04a4ddcfb318a27f9cc6d2f3d9` |
-| `AccountActions` | `0xaa682664f419d51af5071ed0449dffbcf3a417fd12961d916b1a433542e9478d` |
+Use and interact with this software at your own risk. This code has not been independently audited and may contain bugs, vulnerabilities, or other defects. It is provided “as is,” without warranties of any kind. You are responsible for reviewing, testing, and determining its suitability for your intended use.
